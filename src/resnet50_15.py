@@ -5,6 +5,7 @@ import torch.nn.functional as F
 class BottleneckBlock(nn.Module):
     def __init__(self, filters, downsample=False):
         super().__init__()
+        self.downsample = downsample
 
         self.conv1 = nn.Conv2d(4 * filters, filters, 1, stride=1)
         self.bn1 = nn.BatchNorm2d(filters)
@@ -18,10 +19,13 @@ class BottleneckBlock(nn.Module):
         self.conv3 = nn.Conv2d(filters, 4 * filters, 1, stride=1)
         self.bn3 = nn.BatchNorm2d(filters * 4)
         # residual connection here
+        if downsample:
+            self.linProj = nn.Conv2d(4 * filters, 4 * filters, 1, stride=2) # linear projection as explained in the paper
         self.rectifier3 = nn.ReLU()
 
     def forward(self, x):
-        out = x # number of filters must be 4 * filters
+        # Given the input [N, K, Y, X] where N is batch size, K is number of filters, Y and X for coordinates on convoluted image
+        out = x # number of K must be 4 * filters
 
         out = self.conv1(out)
         out = self.bn1(out)
@@ -33,7 +37,7 @@ class BottleneckBlock(nn.Module):
 
         out = self.conv3(out)
         out = self.bn3(out)
-        out = out + x
+        out = out + self.linProj(x) if self.downsample else out + x
         out = self.rectifier3(out)
 
         return out
