@@ -7,21 +7,26 @@ from tensorflow import keras
 DATA_DIR = "tiny-imagenet-200"
 CLASS_NO = 200
 IMAGE_SZ = (64, 64)
-BATCH_SZ = 1
+BATCH_SZ = 64
+EPOCH_NO = 50
 
 # Load dataset
-dataset = keras.preprocessing.image_dataset_from_directory(
-  DATA_DIR, batch_size=BATCH_SZ, image_size=IMAGE_SZ)
+dataset = 
 
 # Set model as ResNet50
-# To use pretrained weights, set weights='imagenet'
 model = tf.keras.applications.ResNet50(
-    include_top=True,
+    include_top=False,
     input_tensor=None,
     input_shape=None,
     pooling=None,
-    classes=CLASS_NO,
-    **kwargs
+    classes=CLASS_NO
 )
 
-model.summary()
+# Compile model, set metrics to display loss/accuracy
+model.compile(
+    optimizer="adam",
+    loss="sparse_categorical_crossentropy",
+    metrics=[keras.metrics.SparseCategoricalAccuracy(name="acc")],
+)
+
+history = model.fit(dataset, epochs=EPOCH_NO)
