@@ -1,5 +1,10 @@
 # Project specific files
 .ipynb_checkpoints
+.azureml
+.vscode
+venv/
+dataset/
+
 
 # IntelliJ project files
 .idea
