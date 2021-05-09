@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -39,5 +40,60 @@ class BottleneckBlock(nn.Module):
         out = self.bn3(out)
         out = out + self.linProj(x) if self.downsample else out + x
         out = self.rectifier3(out)
+
+        return out
+
+class Resnet50_15(nn.Module):
+    def __init__(self, size=224):
+        super().__init__()
+
+        # raw image to conv2d
+        # out = (size - 7 + 2*padding) / 2 + 1
+        #   let out = size/2
+        #   size/2 = (size - 7)/2 + 2*padding/2 + 1
+        #   padding = size/2 - (size-7)/2 - 1 [round up]
+        self.conv_pre = nn.Conv2d(3, 64, 7, stride=2, padding=3) # 112
+        self.max_pool = nn.MaxPool2d(3, stride=2, padding=1) # 56
+
+        self.conv = list()
+
+        #conv2_x (no down-sampling here)
+        self.conv.append(list())
+        self.conv[0].append(nn.Conv2d(64, 256, 1)) # identity to map 64 filters to 256 filters
+        for i in range(3):
+            self.conv[0].append(BottleneckBlock(64))
+
+        #conv3_x
+        self.conv.append(list())
+        self.conv[0].append(nn.Conv2d(256, 512, 1)) # identity to map 256 filters to 512 filters
+        for i in range(4):
+            self.conv[0].append(BottleneckBlock(128, i == 0))
+
+        #conv4_x
+        self.conv.append(list())
+        self.conv[0].append(nn.Conv2d(512, 1024, 1)) # identity to map 512 filters to 1024 filters
+        for i in range(6):
+            self.conv[0].append(BottleneckBlock(256, i == 0))
+
+        #conv5_x
+        self.conv.append(list())
+        self.conv[0].append(nn.Conv2d(1024, 2048, 1)) # identity to map 1024 filters to 2048 filters
+        for i in range(3):
+            self.conv[0].append(BottleneckBlock(512, i == 0))
+
+        self.avg_pool = nn.AvgPool2d(7) # a single average pooling per filters
+
+    def forward(self, x):
+        out = x
+
+        out = self.conv_pre(out)
+        out = self.max_pool(out)
+
+        for group in self.conv:
+            for block in group:
+                out = block(out)    
+
+        out = self.avg_pool(out)
+        out = torch.squeeze(out) # [N, filters, 1, 1] -> [N, filters]
 
         return out
