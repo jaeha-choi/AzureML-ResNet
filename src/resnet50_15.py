@@ -95,3 +95,17 @@ class Resnet50v15(nn.Module):
         out = torch.squeeze(out)  # [N, filters, 1, 1] -> [N, filters]
 
         return out
+
+class Resnet50v15Classifier(nn.Module):
+    def __init__(self, resnet_module, classes=200):
+        super().__init__()
+
+        self.resnet_module = resnet_module
+        self.linear = nn.Linear(2048, classes) # map 2048 to # classes
+        self.softmax = nn.Softmax(dim=-1) # apply softmax activation on last dim
+
+    def forward(self, x):
+        out = self.resnet_module(x)
+        out = self.linear(out)
+        out = self.softmax(out)
+        return out
