@@ -62,7 +62,7 @@ class TinyImagenet(torch.utils.data.Dataset):
             image = self.transform(image)
 
         arr = np.transpose(np.array(image), (2, 0, 1))
-        return torch.from_numpy(arr), cls_int
+        return torch.from_numpy(arr).float(), cls_int
 
     def get_class_name(self, int_label) -> str:
         """
@@ -154,3 +154,4 @@ if __name__ == '__main__':
     test = TinyImagenet()
     print(len(test))
     print(test[0][0].shape)
+    print(test[0][0].type())
