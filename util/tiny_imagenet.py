@@ -62,6 +62,7 @@ class TinyImagenet(torch.utils.data.Dataset):
 
         if self.transform:
             image = self.transform(image)
+
         crop = vision.CenterCrop(self._img_size)
         arr = np.transpose(np.array(crop(image)), (2, 0, 1))
         return torch.from_numpy(arr).float(), cls_int
@@ -75,39 +76,42 @@ class TinyImagenet(torch.utils.data.Dataset):
         return self._int2name[int_label]
 
     def _load_words_txt(self) -> None:
-        with open(self._word_file_n, "r", encoding="utf-8") as file:
-            for line in file:
+        with open(self._word_file_n, "r", encoding="utf-8") as f:
+            for line in f:
                 ln = str(line).strip().split("\t", maxsplit=2)
                 cls_id = ln[0]
                 cls_name = ln[1]
                 self._id2name[cls_id] = cls_name
+
+        for f_name in os.listdir(self._src_dir):
+            if f_name in self._id2name:
                 self._id2int[cls_id] = len(self._id2int)
-                self._int2name[len(self._int2name)] = cls_name
+                self._int2name[len(self._int2name)] = self._id2name[cls_name]
 
     def _save_id2name(self, file_n: str = "id2name.json") -> None:
-        with open(file_n, "w", encoding="utf-8") as file:
-            json.dump(self._id2name, file)
+        with open(file_n, "w", encoding="utf-8") as f:
+            json.dump(self._id2name, f)
 
     def _load_id2name(self, file_n: str = "id2name.json") -> None:
-        with open(file_n, "r", encoding="utf-8") as file:
-            self._id2name = json.load(file)
+        with open(file_n, "r", encoding="utf-8") as f:
+            self._id2name = json.load(f)
 
     def _save_id2int(self, file_n: str = "id2int.json") -> None:
-        with open(file_n, "w", encoding="utf-8") as file:
-            json.dump(self._id2int, file)
+        with open(file_n, "w", encoding="utf-8") as f:
+            json.dump(self._id2int, f)
 
     def _load_id2int(self, file_n: str = "id2int.json") -> None:
-        with open(file_n, "r", encoding="utf-8") as file:
-            self._id2int = json.load(file)
+        with open(file_n, "r", encoding="utf-8") as f:
+            self._id2int = json.load(f)
 
     def _save_int2name(self, file_n: str = "int2name.json") -> None:
-        with open(file_n, "w", encoding="utf-8") as file:
-            json.dump(self._int2name, file)
+        with open(file_n, "w", encoding="utf-8") as f:
+            json.dump(self._int2name, f)
 
     def _load_int2name(self, file_n: str = "int2name.json") -> None:
-        with open(file_n, "r", encoding="utf-8") as file:
+        with open(file_n, "r", encoding="utf-8") as f:
             # convert the keys back to int
-            self._int2name = json.load(file, object_hook=lambda item: {int(k): v for k, v in item.items()})
+            self._int2name = json.load(f, object_hook=lambda item: {int(k): v for k, v in item.items()})
 
     def _load_all_dict(self) -> None:
         self._load_id2name()
@@ -140,8 +144,8 @@ class TinyImagenet(torch.utils.data.Dataset):
                 # This gives class id. E.g: n01443537
                 class_id = os.path.basename(curr_dir)
                 # Reads *class_id*_boxes.txt file that contains bounding box data
-                with open(os.path.join(curr_dir, file_names[0])) as file:
-                    for line in file:
+                with open(os.path.join(curr_dir, file_names[0])) as f:
+                    for line in f:
                         ln = str(line).strip().split("\t")
                         file_name = ln[0]
                         # Bounding box data (left top point, right bot point)
