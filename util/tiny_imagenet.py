@@ -85,8 +85,8 @@ class TinyImagenet(torch.utils.data.Dataset):
 
         for f_name in os.listdir(self._src_dir):
             if f_name in self._id2name:
-                self._id2int[cls_id] = len(self._id2int)
-                self._int2name[len(self._int2name)] = self._id2name[cls_name]
+                self._id2int[f_name] = len(self._id2int)
+                self._int2name[len(self._int2name)] = self._id2name[f_name]
 
     def _save_id2name(self, file_n: str = "id2name.json") -> None:
         with open(file_n, "w", encoding="utf-8") as f:
