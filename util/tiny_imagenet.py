@@ -4,12 +4,13 @@ import os
 import PIL.Image
 import numpy as np
 import torch.utils.data
+import torchvision.transforms as vision
 
 
 class TinyImagenet(torch.utils.data.Dataset):
 
     def __init__(self, base_dir: str = "../dataset/", src_dir: str = "train", load_saved_files: bool = False,
-                 transform=None):
+                 transform=None, img_crop_size: int = 224):
         """
         Initialize the dataset
         :param base_dir: Dataset directory. Contains test/, train/, val/, words.txt, etc
@@ -24,6 +25,7 @@ class TinyImagenet(torch.utils.data.Dataset):
         self._id2name = {}  # n01443537 -> "goldfish, Carassius auratus"
         self._id2int = {}  # n01443537 -> 7335
         self._int2name = {}  # 7335 -> "goldfish, Carassius auratus"
+        self._img_size = img_crop_size
 
         # If some transformation is necessary, create a function for it
         self.transform = transform
@@ -60,8 +62,8 @@ class TinyImagenet(torch.utils.data.Dataset):
 
         if self.transform:
             image = self.transform(image)
-
-        arr = np.transpose(np.array(image), (2, 0, 1))
+        crop = vision.CenterCrop(self._img_size)
+        arr = np.transpose(np.array(crop(image)), (2, 0, 1))
         return torch.from_numpy(arr).float(), cls_int
 
     def get_class_name(self, int_label) -> str:
