@@ -13,7 +13,7 @@ log.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
 # ------- Model parameters ------- #
 EPOCH = 1
 LEARNING_RATE = 0.1
-BATCH_SIZE = 3
+BATCH_SIZE = 10
 SHUFFLE_DATA = True
 
 dataset = TinyImagenet()
@@ -29,7 +29,7 @@ optimizer = opt.SGD(resnet_classifier.parameters(), lr=LEARNING_RATE, momentum=0
 scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.1, patience=10)
 
 for epoch in range(EPOCH):
-    log.info("Epoch: %s" % epoch)
+    log.info("Epoch: %s" % (epoch + 1))
     running_loss = 0
     for i, (img, label) in enumerate(train_dataloader):
         # Train models here
