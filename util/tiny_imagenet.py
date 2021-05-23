@@ -9,7 +9,7 @@ import torchvision.transforms as vision
 
 class TinyImagenet(torch.utils.data.Dataset):
 
-    def __init__(self, base_dir: str = "../dataset/", src_dir: str = "train", load_saved_files: bool = False,
+    def __init__(self, base_dir: str = "./dataset/", src_dir: str = "train", load_saved_files: bool = False,
                  transform=None, img_crop_size: int = 224):
         """
         Initialize the dataset
@@ -164,7 +164,7 @@ class TinyImagenet(torch.utils.data.Dataset):
 
 # Just for testing
 if __name__ == '__main__':
-    test = TinyImagenet(load_saved_files=True)
+    test = TinyImagenet(base_dir="../dataset/", load_saved_files=True)
     print("Total dataset size: %s" % len(test))
     print(test[1234][0].shape)
     print(test[1234][0].type())
