@@ -23,7 +23,7 @@ class TinyImagenet(torch.utils.data.Dataset):
         self._base_dir = base_dir
         self._src_dir = os.path.join(base_dir, src_dir)
         self._word_file_n = os.path.join(base_dir, "words.txt")
-        
+
         self._load_from_file = load_saved_files
         self._images = []  # [("n02056570_1.jpeg", 2), ...]
         self._id2name = {}  # n02056570 -> "king penguin, Aptenodytes patagonica"
