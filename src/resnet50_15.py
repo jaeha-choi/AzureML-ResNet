@@ -80,6 +80,7 @@ class Resnet50v15(nn.Module):
             self.conv.append(BottleneckBlock(512, i == 0))
 
         # a single average pooling per filters
+        # Consider using AdaptiveAvgPool2d(1) for flexible input image size
         self.avg_pool = nn.AvgPool2d(7)
 
     def forward(self, x):
@@ -96,13 +97,14 @@ class Resnet50v15(nn.Module):
 
         return out
 
+
 class Resnet50v15Classifier(nn.Module):
     def __init__(self, resnet_module, classes=200):
         super().__init__()
 
         self.resnet_module = resnet_module
-        self.linear = nn.Linear(2048, classes) # map 2048 to # classes
-        self.softmax = nn.Softmax(dim=-1) # apply softmax activation on last dim
+        self.linear = nn.Linear(2048, classes)  # map 2048 to # classes
+        self.softmax = nn.Softmax(dim=-1)  # apply softmax activation on last dim
 
     def forward(self, x):
         out = self.resnet_module(x)
