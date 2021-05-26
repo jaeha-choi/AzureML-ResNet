@@ -1,10 +1,19 @@
 # Project specific files
 .ipynb_checkpoints
-.azureml
 .vscode
 venv/
 dataset/
 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# azureml
+.azureml
+*.amlignore
+*.amltmp
+*.ipynb_aml_checkpoints*
 
 # IntelliJ project files
 .idea
