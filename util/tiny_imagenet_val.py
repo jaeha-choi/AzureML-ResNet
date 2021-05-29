@@ -5,7 +5,8 @@ import PIL.Image
 import numpy as np
 import torch.utils.data
 import torchvision.transforms as vision
-
+import random
+# import matplotlib.pyplot as plt
 
 class TinyImagenetVal(torch.utils.data.Dataset):
 
@@ -88,6 +89,25 @@ class TinyImagenetVal(torch.utils.data.Dataset):
             # convert the keys back to int
             self._int2name = json.load(f, object_hook=lambda item: {int(k): v for k, v in item.items()})
 
+    def transform(image):
+        original_size = image.size
+        # image.show()
+        new_height = random.randint(0, original_size[1])
+        new_width = random.randint(0, original_size[0])
+        crop_size = [new_height, new_width]
+        # print(crop_size)
+
+        transformimage = vision.Compose(
+            [
+                vision.RandomHorizontalFlip(p=0.5),
+                vision.transforms.RandomCrop(crop_size, padding=None, pad_if_needed=False, fill=0, padding_mode='constant'),
+                vision.Resize(original_size)
+            #  transforms.ToTensor()
+                ])
+        image = transformimage(image)
+        # image.show()
+
+        return image
 
 # Just for testing
 if __name__ == '__main__':
