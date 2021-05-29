@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from torch.nn import ModuleList
+
 
 class BottleneckBlock(nn.Module):
     def __init__(self, filters, downsample=False):
@@ -57,7 +59,7 @@ class Resnet50v15(nn.Module):
         self.conv_pre = nn.Conv2d(3, 64, (7, 7), stride=(2, 2), padding=(3, 3))  # 112
         self.max_pool = nn.MaxPool2d(3, stride=2, padding=1)  # 56
 
-        self.conv = []
+        self.conv = ModuleList()
 
         # conv2_x (no down-sampling here)
         self.conv.append(nn.Conv2d(64, 256, (1, 1)))  # identity to map 64 filters to 256 filters
@@ -99,15 +101,18 @@ class Resnet50v15(nn.Module):
 
 
 class Resnet50v15Classifier(nn.Module):
-    def __init__(self, resnet_module, classes=200):
+    def __init__(self, resnet_module, classes=200, softmax=True):
         super().__init__()
+        self.softmax = softmax
 
         self.resnet_module = resnet_module
         self.linear = nn.Linear(2048, classes)  # map 2048 to # classes
-        self.softmax = nn.Softmax(dim=-1)  # apply softmax activation on last dim
+        if softmax: # only for inference. For training, CrossEntropyLoss require raw logits without softmax
+            self.softmax = nn.Softmax(dim=-1)  # apply softmax activation on last dim
 
     def forward(self, x):
         out = self.resnet_module(x)
         out = self.linear(out)
-        out = self.softmax(out)
+        if self.softmax:
+            out = self.softmax(out)
         return out
