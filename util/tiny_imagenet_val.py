@@ -5,8 +5,7 @@ import PIL.Image
 import numpy as np
 import torch.utils.data
 import torchvision.transforms as vision
-import random
-# import matplotlib.pyplot as plt
+
 
 class TinyImagenetVal(torch.utils.data.Dataset):
 
@@ -21,6 +20,7 @@ class TinyImagenetVal(torch.utils.data.Dataset):
         """
         # Dataset directory. Contains test/, train/, val/, words.txt, etc
         self._base_dir = base_dir
+        self.data_group = src_dir
         self._src_dir = os.path.join(base_dir, src_dir)
 
         self._images = []
@@ -54,7 +54,7 @@ class TinyImagenetVal(torch.utils.data.Dataset):
         image = PIL.Image.open(full_file_name).convert("RGB")
 
         if self.transform:
-            image = self.transform(image)
+            image = self.transform(image, self.data_group)
 
         cropped = vision.CenterCrop(self._img_size)
         arr = np.transpose(np.array(cropped(image)), (2, 0, 1))
@@ -89,25 +89,30 @@ class TinyImagenetVal(torch.utils.data.Dataset):
             # convert the keys back to int
             self._int2name = json.load(f, object_hook=lambda item: {int(k): v for k, v in item.items()})
 
-    def transform(image):
-        original_size = image.size
-        # image.show()
-        new_height = random.randint(0, original_size[1])
-        new_width = random.randint(0, original_size[0])
-        crop_size = [new_height, new_width]
-        # print(crop_size)
-
+def transform(image, group):
+    crop_size = 224
+    
+    if group == 'train':
         transformimage = vision.Compose(
             [
-                vision.RandomHorizontalFlip(p=0.5),
-                vision.transforms.RandomCrop(crop_size, padding=None, pad_if_needed=False, fill=0, padding_mode='constant'),
-                vision.Resize(original_size)
-            #  transforms.ToTensor()
+                # vision.ToTensor(),
+                # vision.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                vision.transforms.RandomResizedCrop(crop_size, scale=(0.08, 1.0), ratio=(0.75,1.33)),
+                vision.RandomHorizontalFlip(p=0.5)
                 ])
-        image = transformimage(image)
-        # image.show()
+    else:
+        scale_size = 256
+        transformimage = vision.Compose(
+            [
+                # vision.ToTensor(),
+                # vision.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                vision.Resize(scale_size),
+                vision.CenterCrop(crop_size)
+                ])
+    image = transformimage(image)
+    # image = vision.ToPILImage()(image).convert("RGB")
 
-        return image
+    return image
 
 # Just for testing
 if __name__ == '__main__':
