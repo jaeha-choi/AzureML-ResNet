@@ -1,3 +1,7 @@
+import os
+import sys
+import argparse
+
 import logging as log
 
 import torch.nn as nn
@@ -11,11 +15,21 @@ log.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
                 level=log.INFO, datefmt='%m/%d/%Y %I:%M:%S %p')
 
 # ------- Model parameters ------- #
-EPOCH = 100
-LEARNING_RATE = 1e-3
-BATCH_SIZE = 2 # number of batches (SAMPLE_SIZE / BATCH_SIZE per batch)
-SHUFFLE_DATA = False
-DATASET_LOCATION = "../tiny-imagenet-200"
+parser = argparse.ArgumentParser("Resnet50v15")
+parser.add_argument("--num_epochs", type=int, help="Number of epochs", default=32)
+parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
+parser.add_argument("--batch", type=int, help="Size of each batch", default=2)
+parser.add_argument("--shuffle", type=bool, help="Whether to shuffle the data", default=True)
+parser.add_argument("--dataloc", type=str, help="TinyImagenet200 dataset location")
+parser.add_argument("--output_dir", type=str, help="Directory location to save the model outputs")
+args = parser.parse_args()
+
+EPOCH = args.num_epochs
+LEARNING_RATE = args.lr
+BATCH_SIZE = args.batch # number of batches (SAMPLE_SIZE / BATCH_SIZE per batch)
+SHUFFLE_DATA = args.shuffle
+DATASET_LOCATION = args.dataloc
+OUTPUT_DIR = args.output_dir
 
 dataset = TinyImagenet(DATASET_LOCATION)
 train_dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
