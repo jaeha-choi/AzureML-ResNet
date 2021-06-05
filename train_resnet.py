@@ -1,24 +1,26 @@
-import os
-import sys
 import argparse
-
 import logging as log
 
+import torch
 import torch.nn as nn
 import torch.optim as opt
-from torch.utils.data import DataLoader, Subset
+# Azure
+from azureml.core import Run
+from torch.utils.data import DataLoader
 
 from src.resnet50_15 import Resnet50v15, Resnet50v15Classifier
 from util.tiny_imagenet import TinyImagenet
 
-# Azure
-from azureml.core import Run
 run = Run.get_context()
 # Azure end
 
 log.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
-                level=log.INFO, datefmt='%m/%d/%Y %I:%M:%S %p')
-log.info("Logger:", str(log));
+                level=log.DEBUG, datefmt='%m/%d/%Y %I:%M:%S %p')
+log.info("Logger:", str(log))
+device_cnt = torch.cuda.device_count()
+log.debug("Number of available GPUs: %s" % device_cnt)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+log.debug("Current device: %s" % device)
 
 # ------- Model parameters ------- #
 parser = argparse.ArgumentParser("Resnet50v15")
@@ -32,12 +34,12 @@ args = parser.parse_args()
 
 EPOCH = args.num_epochs
 LEARNING_RATE = args.lr
-BATCH_SIZE = args.batch # number of batches (SAMPLE_SIZE / BATCH_SIZE per batch)
+BATCH_SIZE = args.batch  # number of batches (SAMPLE_SIZE / BATCH_SIZE per batch)
 SHUFFLE_DATA = args.shuffle
 DATASET_LOCATION = args.dataloc
 OUTPUT_DIR = args.output_dir
 
-log.info("Loading dataset from "+DATASET_LOCATION)
+log.info("Loading dataset from " + DATASET_LOCATION)
 dataset = TinyImagenet(DATASET_LOCATION)
 train_dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
 log.info("Dataset is ready.")
@@ -46,8 +48,10 @@ log.info("Dataset is ready.")
 
 log.info("Preparing model...")
 resnet = Resnet50v15()
+resnet = resnet.to(device)
 resnet_classifier = Resnet50v15Classifier(resnet, classes=200, softmax=False)
-#print(resnet_classifier)
+resnet_classifier = resnet_classifier.to(device)
+# print(resnet_classifier)
 log.info("Model is ready.")
 
 log.info("Setting hyperparameters...")
@@ -61,18 +65,20 @@ for epoch in range(EPOCH):
     running_loss = 0
     for i, (img, label) in enumerate(train_dataloader):
         # Train models here
-        optimizer.zero_grad() # gradient reset
+        optimizer.zero_grad()  # gradient reset
+        img = img.to(device)
+        label = label.to(device)
         pred = resnet_classifier(img)
-        loss = loss_fn(pred, label) # forward prop
+        loss = loss_fn(pred, label)  # forward prop
         # print("label", label)
-        loss.backward() # backward prop
-        optimizer.step() # update gradients
-        
-        #scheduler.step(val_loss) # note that scheduler must be used after the training steps
+        loss.backward()  # backward prop
+        optimizer.step()  # update gradients
+
+        # scheduler.step(val_loss) # note that scheduler must be used after the training steps
         running_loss = loss.item()
-        if True: #(i + 1) % 10 == 0:
-            log.info("Epoch: %s\tBatch: %s\tTrainLoss: %s" % (epoch + 1, i + 1, running_loss))
-            
+        if True:  # (i + 1) % 10 == 0:
+            log.info("Epoch: %s/%s\tBatch: %s/%s\tTrain Loss: %s" % (
+                epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss))
             # Azure
             run.log('train_loss', running_loss)
             # Azure end
