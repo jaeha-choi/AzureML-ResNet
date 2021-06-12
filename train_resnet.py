@@ -2,6 +2,7 @@ import argparse
 import logging as log
 
 import torch
+import torchmetrics
 import torch.nn as nn
 import torch.optim as opt
 # Azure
@@ -10,6 +11,7 @@ from torch.utils.data import DataLoader
 
 from src.resnet50_15 import Resnet50v15, Resnet50v15Classifier
 from util.tiny_imagenet import TinyImagenet
+from util.tiny_imagenet_val import TinyImagenetVal
 
 run = Run.get_context()
 # Azure end
@@ -42,6 +44,8 @@ OUTPUT_DIR = args.output_dir
 log.info("Loading dataset from " + DATASET_LOCATION)
 dataset = TinyImagenet(DATASET_LOCATION)
 train_dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
+# dataset_val = TinyImagenetVal(DATASET_LOCATION)
+# val_dataloader = DataLoader(dataset_val, batch_size=BATCH_SIZE)
 log.info("Dataset is ready.")
 
 # image = torch.randn(8, 3, 224, 224)
@@ -51,7 +55,15 @@ resnet = Resnet50v15()
 resnet = resnet.to(device)
 resnet_classifier = Resnet50v15Classifier(resnet, classes=200, softmax=False)
 resnet_classifier = resnet_classifier.to(device)
+
+resnet_classifier_inference = nn.Sequential(
+    resnet_classifier,
+    nn.Softmax(dim=-1),
+)
+resnet_classifier_inference = resnet_classifier_inference.to(device)
 # print(resnet_classifier)
+
+metric_acc = torchmetrics.Accuracy().to(device)
 log.info("Model is ready.")
 
 log.info("Setting hyperparameters...")
@@ -63,6 +75,7 @@ log.info("Ready for training.")
 for epoch in range(EPOCH):
     log.info("Epoch: %s" % (epoch + 1))
     running_loss = 0
+    running_acc = 0
     for i, (img, label) in enumerate(train_dataloader):
         # Train models here
         optimizer.zero_grad()  # gradient reset
@@ -74,13 +87,20 @@ for epoch in range(EPOCH):
         loss.backward()  # backward prop
         optimizer.step()  # update gradients
 
+        # calculate accuracy
+        pred_prob = resnet_classifier_inference(img)
+        pred_prob = pred_prob.to(device);
+        acc = metric_acc(pred_prob, label)
+
         # scheduler.step(val_loss) # note that scheduler must be used after the training steps
         running_loss = loss.item()
+        running_acc = acc.item()
         if True:  # (i + 1) % 10 == 0:
             log.info("Epoch: %s/%s\tBatch: %s/%s\tTrain Loss: %s" % (
                 epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss))
             # Azure
             run.log('train_loss', running_loss)
+            run.log('train_acc', running_acc)
             # Azure end
         # break
     # break
