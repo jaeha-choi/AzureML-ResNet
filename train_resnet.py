@@ -1,5 +1,5 @@
 import argparse
-import logging as log
+import logging
 
 import torch
 import torchmetrics
@@ -16,9 +16,14 @@ from util.tiny_imagenet_val import TinyImagenetVal
 run = Run.get_context()
 # Azure end
 
-log.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
-                level=log.DEBUG, datefmt='%m/%d/%Y %I:%M:%S %p')
-log.info("Logger:", str(log))
+log = logging.getLogger("train_resnet")
+log.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", '%m/%d/%Y %I:%M:%S %p')
+stream_h = logging.StreamHandler()
+stream_h.setLevel(logging.DEBUG)
+stream_h.setFormatter(formatter)
+log.addHandler(stream_h)
+
 device_cnt = torch.cuda.device_count()
 log.debug("Number of available GPUs: %s" % device_cnt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -89,14 +94,14 @@ for epoch in range(EPOCH):
 
         # calculate accuracy
         pred_prob = resnet_classifier_inference(img)
-        pred_prob = pred_prob.to(device);
+        pred_prob = pred_prob.to(device)
         acc = metric_acc(pred_prob, label)
 
         # scheduler.step(val_loss) # note that scheduler must be used after the training steps
         running_loss = loss.item()
         running_acc = acc.item()
         if True:  # (i + 1) % 10 == 0:
-            log.info("Epoch: %s/%s\tBatch: %s/%s\tTrain Loss: %s" % (
+            log.info("Epoch: %s/%s\tBatch: %s/%s\t\tTrain Loss: %s" % (
                 epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss))
             # Azure
             run.log('train_loss', running_loss)
