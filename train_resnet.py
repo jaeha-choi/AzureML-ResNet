@@ -47,10 +47,10 @@ DATASET_LOCATION = args.dataloc
 OUTPUT_DIR = args.output_dir
 
 log.info("Loading dataset from " + DATASET_LOCATION)
-dataset = TinyImagenet(DATASET_LOCATION)
-train_dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
-# dataset_val = TinyImagenetVal(DATASET_LOCATION)
-# val_dataloader = DataLoader(dataset_val, batch_size=BATCH_SIZE)
+train_dataset = TinyImagenet(DATASET_LOCATION)
+train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
+val_dataset = TinyImagenetVal(DATASET_LOCATION)
+val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 log.info("Dataset is ready.")
 
 # image = torch.randn(8, 3, 224, 224)
@@ -81,6 +81,8 @@ for epoch in range(EPOCH):
     log.info("Epoch: %s" % (epoch + 1))
     running_loss = 0
     running_acc = 0
+    # Set to training mode
+    resnet.train()
     for i, (img, label) in enumerate(train_dataloader):
         # Train models here
         optimizer.zero_grad()  # gradient reset
@@ -100,12 +102,29 @@ for epoch in range(EPOCH):
         # scheduler.step(val_loss) # note that scheduler must be used after the training steps
         running_loss = loss.item()
         running_acc = acc.item()
-        if True:  # (i + 1) % 10 == 0:
-            log.info("Epoch: %s/%s\tBatch: %s/%s\t\tTrain Loss: %s" % (
+        if (i + 1) % 5 == 0:
+            log.info("Training:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %s" % (
                 epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss))
             # Azure
             run.log('train_loss', running_loss)
             run.log('train_acc', running_acc)
             # Azure end
-        # break
-    # break
+
+    running_loss_val = 0
+    running_acc_val = 0
+    # Set to validation mode
+    resnet.eval()
+    with torch.no_grad():
+        for i, (img, label) in enumerate(val_dataloader):
+            img = img.to(device)
+            label = label.to(device)
+            pred = resnet_classifier(img)
+            loss = loss_fn(pred, label)
+
+            running_loss_val = loss.item()
+            if (i + 1) % 5 == 0:
+                log.info("Validation:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %s" % (
+                    epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss_val))
+                # Azure
+                run.log('val_loss', running_loss_val)
+                # Azure end
