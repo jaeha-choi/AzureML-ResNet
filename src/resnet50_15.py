@@ -83,7 +83,8 @@ class Resnet50v15(nn.Module):
 
         # a single average pooling per filters
         # Consider using AdaptiveAvgPool2d(1) for flexible input image size
-        self.avg_pool = nn.AvgPool2d(7)
+        # self.avg_pool = nn.AvgPool2d(7)
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
         out = x

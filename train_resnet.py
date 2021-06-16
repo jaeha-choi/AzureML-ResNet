@@ -16,27 +16,14 @@ from util.tiny_imagenet_val import TinyImagenetVal
 run = Run.get_context()
 # Azure end
 
-log = logging.getLogger("train_resnet")
-log.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", '%m/%d/%Y %I:%M:%S %p')
-stream_h = logging.StreamHandler()
-stream_h.setLevel(logging.DEBUG)
-stream_h.setFormatter(formatter)
-log.addHandler(stream_h)
-
-device_cnt = torch.cuda.device_count()
-log.debug("Number of available GPUs: %s" % device_cnt)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-log.debug("Current device: %s" % device)
-
 # ------- Model parameters ------- #
 parser = argparse.ArgumentParser("Resnet50v15")
 parser.add_argument("--num_epochs", type=int, help="Number of epochs", default=32)
 parser.add_argument("--lr", type=float, help="Learning rate", default=1e-3)
 parser.add_argument("--batch", type=int, help="Size of each batch", default=2)
 parser.add_argument("--shuffle", type=bool, help="Whether to shuffle the data", default=True)
-parser.add_argument("--dataloc", type=str, help="TinyImagenet200 dataset location")
-parser.add_argument("--output_dir", type=str, help="Directory location to save the model outputs")
+parser.add_argument("--dataloc", type=str, help="TinyImagenet200 dataset location", default="./dataset")
+parser.add_argument("--output_dir", type=str, help="Directory location to save the model outputs", default="./out")
 args = parser.parse_args()
 
 EPOCH = args.num_epochs
@@ -45,16 +32,33 @@ BATCH_SIZE = args.batch  # number of batches (SAMPLE_SIZE / BATCH_SIZE per batch
 SHUFFLE_DATA = args.shuffle
 DATASET_LOCATION = args.dataloc
 OUTPUT_DIR = args.output_dir
+IMAGE_SIZE = 64
 
+# Basic logger setting
+log = logging.getLogger("train_resnet")
+log.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", '%m/%d/%Y %I:%M:%S %p')
+stream_h = logging.StreamHandler()
+stream_h.setLevel(logging.DEBUG)
+stream_h.setFormatter(formatter)
+log.addHandler(stream_h)
+
+# Use gpu if possible
+device_cnt = torch.cuda.device_count()
+log.debug("Number of available GPUs: %s" % device_cnt)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+log.debug("Current device: %s" % device)
+
+# Load datasets
 log.info("Loading dataset from " + DATASET_LOCATION)
-train_dataset = TinyImagenet(DATASET_LOCATION)
+train_dataset = TinyImagenet(DATASET_LOCATION, img_crop_size=IMAGE_SIZE)
+# train_dataset.save_all_dict() # This line is disabled for read-only file system
 train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
-val_dataset = TinyImagenetVal(DATASET_LOCATION)
+val_dataset = TinyImagenetVal(DATASET_LOCATION, img_crop_size=IMAGE_SIZE)
 val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 log.info("Dataset is ready.")
 
-# image = torch.randn(8, 3, 224, 224)
-
+# Init model
 log.info("Preparing model...")
 resnet = Resnet50v15()
 resnet = resnet.to(device)
@@ -71,6 +75,7 @@ resnet_classifier_inference = resnet_classifier_inference.to(device)
 metric_acc = torchmetrics.Accuracy().to(device)
 log.info("Model is ready.")
 
+# Init params
 log.info("Setting hyperparameters...")
 loss_fn = nn.CrossEntropyLoss()
 optimizer = opt.SGD(resnet_classifier.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=0.0001)
@@ -102,13 +107,13 @@ for epoch in range(EPOCH):
         # scheduler.step(val_loss) # note that scheduler must be used after the training steps
         running_loss = loss.item()
         running_acc = acc.item()
-        if (i + 1) % 5 == 0:
-            log.info("Training:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %s" % (
+        if (i + 1) % 100 == 0:
+            log.info("Training:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %.8f" % (
                 epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss))
-            # Azure
-            run.log('train_loss', running_loss)
-            run.log('train_acc', running_acc)
-            # Azure end
+    # Azure
+    run.log('train_loss', running_loss)
+    run.log('train_acc', running_acc)
+    # Azure end
 
     running_loss_val = 0
     running_acc_val = 0
@@ -121,10 +126,17 @@ for epoch in range(EPOCH):
             pred = resnet_classifier(img)
             loss = loss_fn(pred, label)
 
+            # calculate accuracy
+            pred_prob = resnet_classifier_inference(img)
+            pred_prob = pred_prob.to(device)
+            acc = metric_acc(pred_prob, label)
+
             running_loss_val = loss.item()
-            if (i + 1) % 5 == 0:
+            running_acc = acc.item()
+            if (i + 1) % 10 == 0:
                 log.info("Validation:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %s" % (
                     epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss_val))
-                # Azure
-                run.log('val_loss', running_loss_val)
-                # Azure end
+    # Azure
+    run.log('val_loss', running_loss_val)
+    run.log('val_acc', running_acc)
+    # Azure end
