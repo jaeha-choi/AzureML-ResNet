@@ -45,9 +45,9 @@ log.addHandler(stream_h)
 
 # Use gpu if possible
 device_cnt = torch.cuda.device_count()
-log.debug("Number of available GPUs: %s" % device_cnt)
+log.info("Number of available GPUs: %s" % device_cnt)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-log.debug("Current device: %s" % device)
+log.info("Current device: %s" % device)
 
 # Load datasets
 log.info("Loading dataset from " + DATASET_LOCATION)
