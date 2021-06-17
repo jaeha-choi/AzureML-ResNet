@@ -85,7 +85,7 @@ log.info("Ready for training.")
 for epoch in range(EPOCH):
     log.info("Epoch: %s" % (epoch + 1))
     running_loss = 0
-    running_acc = 0
+    running_corrects = torch.zeros(1).to(device)
     # Set to training mode
     resnet.train()
     for i, (img, label) in enumerate(train_dataloader):
@@ -99,24 +99,24 @@ for epoch in range(EPOCH):
         loss.backward()  # backward prop
         optimizer.step()  # update gradients
 
-        # calculate accuracy
-        pred_prob = resnet_classifier_inference(img)
-        pred_prob = pred_prob.to(device)
-        acc = metric_acc(pred_prob, label)
-
-        # scheduler.step(val_loss) # note that scheduler must be used after the training steps
+        # calculate metrics
         running_loss = loss.item()
-        running_acc = acc.item()
+        # torch.max gives values and indices
+        _, pred_idx = torch.max(pred, 1)
+        running_corrects += torch.eq(pred_idx, label).sum()
+        # scheduler.step(val_loss) # note that scheduler must be used after the training steps
+
         if (i + 1) % 100 == 0:
             log.info("Training:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %.8f" % (
                 epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss))
     # Azure
     run.log('train_loss', running_loss)
-    run.log('train_acc', running_acc)
+    epoch_acc = (running_corrects.double() / len(train_dataset)).item()
+    run.log('train_acc', epoch_acc)
     # Azure end
 
     running_loss_val = 0
-    running_acc_val = 0
+    running_corrects_val = torch.zeros(1).to(device)
     # Set to validation mode
     resnet.eval()
     with torch.no_grad():
@@ -126,17 +126,15 @@ for epoch in range(EPOCH):
             pred = resnet_classifier(img)
             loss = loss_fn(pred, label)
 
-            # calculate accuracy
-            pred_prob = resnet_classifier_inference(img)
-            pred_prob = pred_prob.to(device)
-            acc = metric_acc(pred_prob, label)
-
+            # calculate metrics
             running_loss_val = loss.item()
-            running_acc = acc.item()
+            _, pred_idx = torch.max(pred, 1)
+            running_corrects_val += torch.eq(pred_idx, label).sum()
             if (i + 1) % 10 == 0:
                 log.info("Validation:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %s" % (
                     epoch + 1, EPOCH, i + 1, len(train_dataloader), running_loss_val))
     # Azure
     run.log('val_loss', running_loss_val)
-    run.log('val_acc', running_acc)
+    epoch_acc_val = (running_corrects_val.double() / len(val_dataset)).item()
+    run.log('val_acc', epoch_acc_val)
     # Azure end
