@@ -67,9 +67,10 @@ class TinyImagenet(torch.utils.data.Dataset):
         if self.transform:
             image = self.transform(image)
 
-        crop = vision.CenterCrop(self._img_size)
-        arr = np.transpose(np.array(crop(image)), (2, 0, 1))
-        return torch.from_numpy(arr).float(), cls_int
+        # crop = vision.CenterCrop(self._img_size)
+        # arr = np.transpose(np.array(crop(image)), (2, 0, 1))
+        # return torch.from_numpy(arr).float(), cls_int
+        return image, cls_int
 
     def get_class_name(self, int_label) -> str:
         """

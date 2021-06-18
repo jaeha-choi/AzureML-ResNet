@@ -7,6 +7,32 @@ import torch.utils.data
 import torchvision.transforms as vision
 
 
+def _transform(image, group):
+    crop_size = 224
+
+    if group == 'train':
+        transformimage = vision.Compose(
+            [
+                # vision.ToTensor(),
+                # vision.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                vision.transforms.RandomResizedCrop(crop_size, scale=(0.08, 1.0), ratio=(0.75, 1.33)),
+                vision.RandomHorizontalFlip(p=0.5)
+            ])
+    else:
+        scale_size = 256
+        transformimage = vision.Compose(
+            [
+                # vision.ToTensor(),
+                # vision.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                vision.Resize(scale_size),
+                vision.CenterCrop(crop_size)
+            ])
+    image = transformimage(image)
+    # image = vision.ToPILImage()(image).convert("RGB")
+
+    return image
+
+
 class TinyImagenetVal(torch.utils.data.Dataset):
 
     def __init__(self, base_dir: str = "./dataset/", src_dir: str = "val", transform=None, img_crop_size: int = 224):
@@ -54,11 +80,13 @@ class TinyImagenetVal(torch.utils.data.Dataset):
         image = PIL.Image.open(full_file_name).convert("RGB")
 
         if self.transform:
-            image = self.transform(image, self.data_group)
+            # image = self.transform(image, self.data_group)
+            image = self.transform(image)
 
-        cropped = vision.CenterCrop(self._img_size)
-        arr = np.transpose(np.array(cropped(image)), (2, 0, 1))
-        return torch.from_numpy(arr).float(), img_label
+        # cropped = vision.CenterCrop(self._img_size)
+        # arr = np.transpose(np.array(cropped(image)), (2, 0, 1))
+        # return torch.from_numpy(arr).float(), img_label
+        return image, img_label
 
     def get_class_name(self, int_label) -> str:
         """
@@ -89,30 +117,6 @@ class TinyImagenetVal(torch.utils.data.Dataset):
             # convert the keys back to int
             self._int2name = json.load(f, object_hook=lambda item: {int(k): v for k, v in item.items()})
 
-def transform(image, group):
-    crop_size = 224
-    
-    if group == 'train':
-        transformimage = vision.Compose(
-            [
-                # vision.ToTensor(),
-                # vision.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                vision.transforms.RandomResizedCrop(crop_size, scale=(0.08, 1.0), ratio=(0.75,1.33)),
-                vision.RandomHorizontalFlip(p=0.5)
-                ])
-    else:
-        scale_size = 256
-        transformimage = vision.Compose(
-            [
-                # vision.ToTensor(),
-                # vision.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                vision.Resize(scale_size),
-                vision.CenterCrop(crop_size)
-                ])
-    image = transformimage(image)
-    # image = vision.ToPILImage()(image).convert("RGB")
-
-    return image
 
 # Just for testing
 if __name__ == '__main__':

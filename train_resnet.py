@@ -6,6 +6,7 @@ import torchmetrics
 import torch.nn as nn
 import torch.optim as opt
 # Azure
+import torchvision
 from azureml.core import Run
 from torch.utils.data import DataLoader
 
@@ -51,10 +52,16 @@ log.info("Current device: %s" % device)
 
 # Load datasets
 log.info("Loading dataset from " + DATASET_LOCATION)
-train_dataset = TinyImagenet(DATASET_LOCATION, img_crop_size=IMAGE_SIZE)
+train_dataset = TinyImagenet(DATASET_LOCATION, img_crop_size=IMAGE_SIZE, transform=torchvision.transforms.Compose([
+    torchvision.transforms.ToTensor(),
+    torchvision.transforms.CenterCrop(IMAGE_SIZE)
+]))
 # train_dataset.save_all_dict() # This line is disabled for read-only file system
 train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=SHUFFLE_DATA)
-val_dataset = TinyImagenetVal(DATASET_LOCATION, img_crop_size=IMAGE_SIZE)
+val_dataset = TinyImagenetVal(DATASET_LOCATION, img_crop_size=IMAGE_SIZE, transform=torchvision.transforms.Compose([
+    torchvision.transforms.ToTensor(),
+    torchvision.transforms.CenterCrop(IMAGE_SIZE)
+]))
 val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 log.info("Dataset is ready.")
 
