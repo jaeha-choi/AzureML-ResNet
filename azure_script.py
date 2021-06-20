@@ -30,12 +30,27 @@ datastore = Datastore.get(ws, 'workspaceblobstore')
 dataset = Dataset.File.from_files(path=(datastore, data_path))
 data_loc = dataset.as_named_input('input').as_mount()
 
+# src = ScriptRunConfig(source_directory=project_folder,
+#                       # command=['ls'],
+#                       script='train_resnet.py',
+#                       arguments=[
+#                           '--num_epochs', 16,
+#                           '--batch', '32',
+#                           '--shuffle', 'True',
+#                           '--dataloc', data_loc,
+#                           '--output_dir', './outputs',
+#                       ],
+#                       compute_target=compute_target,
+#                       environment=pytorch_env)
+#
+# run = Experiment(ws, name='Train-Resnet50v15').submit(src)
+
 src = ScriptRunConfig(source_directory=project_folder,
                       # command=['ls'],
-                      script='train_resnet.py',
+                      script='cifar10-test.py',
                       arguments=[
-                          '--num_epochs', 16,
-                          '--batch', '32',
+                          '--num_epochs', 70,
+                          '--batch', '128',
                           '--shuffle', 'True',
                           '--dataloc', data_loc,
                           '--output_dir', './outputs',
@@ -43,7 +58,7 @@ src = ScriptRunConfig(source_directory=project_folder,
                       compute_target=compute_target,
                       environment=pytorch_env)
 
-run = Experiment(ws, name='Train-Resnet50v15').submit(src)
+run = Experiment(ws, name='Resnet50v15-cifar10').submit(src)
 print("Script submitted")
 
 run.wait_for_completion(show_output=True)
