@@ -22,7 +22,7 @@ def main():
 
     # ------- Model parameters ------- #
     parser = argparse.ArgumentParser("Resnet50v15")
-    parser.add_argument("--num_epochs", type=int, help="Number of epochs", default=32)
+    parser.add_argument("--num_epochs", type=int, help="Number of epochs", default=70)
     parser.add_argument("--lr", type=float, help="Learning rate", default=1e-2)
     parser.add_argument("--batch", type=int, help="Size of each batch", default=32)
     parser.add_argument("--shuffle", type=bool, help="Whether to shuffle the data", default=True)
@@ -55,7 +55,8 @@ def main():
 
     transform = transforms.Compose(
         [transforms.ToTensor(),
-         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+         # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+         ])
 
     batch_size = 4
 
@@ -78,24 +79,16 @@ def main():
     log.info("Preparing model...")
     resnet = Resnet50v15()
     resnet = resnet.to(device)
-    resnet_classifier = Resnet50v15Classifier(resnet, classes=200, softmax=False)
+    resnet_classifier = Resnet50v15Classifier(resnet, classes=200, softmax=True)
     resnet_classifier = resnet_classifier.to(device)
 
-    resnet_classifier_inference = nn.Sequential(
-        resnet_classifier,
-        nn.Softmax(dim=-1),
-    )
-    resnet_classifier_inference = resnet_classifier_inference.to(device)
-    # print(resnet_classifier)
-
-    metric_acc = torchmetrics.Accuracy().to(device)
     log.info("Model is ready.")
 
     # Init params
     log.info("Setting hyperparameters...")
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = opt.SGD(resnet_classifier.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=5e-4)
-    # scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.1, patience=10)
+    optimizer = opt.SGD(resnet_classifier.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=1e-4)
+    scheduler = opt.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.1, patience=10)
     log.info("Ready for training.")
 
     for epoch in range(EPOCH):
@@ -114,7 +107,7 @@ def main():
             # print("label", label)
             loss.backward()  # backward prop
             optimizer.step()  # update gradients
-
+            scheduler.step(loss)
             # calculate metrics
             running_loss = loss.item()
             # torch.max gives values and indices
@@ -122,7 +115,7 @@ def main():
             running_corrects += torch.eq(pred_idx, label).sum()
             # scheduler.step(val_loss) # note that scheduler must be used after the training steps
 
-            if (i + 1) % 5 == 0:
+            if (i + 1) % 100 == 0:
                 log.info("Training:: Epoch: %s/%s\tBatch: %s/%s\t\tLoss: %.8f" % (
                     epoch + 1, EPOCH, i + 1, len(trainloader), running_loss))
         # Azure
