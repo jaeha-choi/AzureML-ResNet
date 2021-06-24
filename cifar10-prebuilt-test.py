@@ -77,10 +77,8 @@ def main():
 
     # Init model
     log.info("Preparing model...")
-    resnet = Resnet50v15()
+    resnet = torchvision.models.resnet50()
     resnet = resnet.to(device)
-    # resnet_classifier = Resnet50v15Classifier(resnet, classes=200, softmax=True)
-    # resnet_classifier = resnet_classifier.to(device)
 
     log.info("Model is ready.")
 
@@ -102,7 +100,7 @@ def main():
             optimizer.zero_grad()  # gradient reset
             img = img.to(device)
             label = label.to(device)
-            pred = resnet_classifier(img)
+            pred = resnet(img)
             loss = loss_fn(pred, label)  # forward prop
             # print("label", label)
             loss.backward()  # backward prop
@@ -132,7 +130,7 @@ def main():
             for i, (img, label) in enumerate(testloader):
                 img = img.to(device)
                 label = label.to(device)
-                pred = resnet_classifier(img)
+                pred = resnet(img)
                 loss = loss_fn(pred, label)
 
                 # calculate metrics
